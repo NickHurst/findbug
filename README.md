@@ -8,16 +8,20 @@
 
 FindBug provides Sentry-like functionality with all data stored on your own infrastructure using Redis and your database. Zero external dependencies, full data ownership.
 
+📚 **Full documentation:** [findbug.dev/docs](https://findbug.dev/docs)
+
 ## Features
 
 - **Error Tracking** - Capture exceptions with full context, stack traces, and request data
 - **Performance Monitoring** - Track request timing, SQL queries, and automatic N+1 detection
-- **Self-Hosted** - All data stays on your infrastructure (Redis + PostgreSQL/MySQL)
+- **Self-Hosted** - All data stays on your infrastructure (Redis + your existing database)
+- **Database-Agnostic** - Works on PostgreSQL, MySQL, and SQLite — adapter detected automatically
 - **Zero Performance Impact** - Async writes via Redis buffer, never blocks your requests
 - **Built-in Dashboard** - Beautiful web UI for viewing errors and performance metrics
 - **Multi-channel Alerts** - Email, Slack, Discord, and custom webhooks
 - **Works Out of the Box** - Built-in background persister, no job scheduler required
 - **Rails 7+ Native** - Designed for modern Rails applications
+- **Tested** - Comprehensive RSpec suite covering every adapter path
 
 ## Why FindBug?
 
@@ -34,7 +38,7 @@ FindBug provides Sentry-like functionality with all data stored on your own infr
 - Ruby 3.1+
 - Rails 7.0+
 - Redis 4.0+
-- PostgreSQL or MySQL
+- A relational database — PostgreSQL, MySQL, or SQLite
 
 ## Installation
 
@@ -240,7 +244,7 @@ end
 │                                         └────────┬─────────┘   │
 │                                                  │              │
 │                                                  ▼              │
-│  Dashboard ◄──────────────────── Database (PostgreSQL/MySQL)   │
+│  Dashboard ◄──────────────────── Database (PostgreSQL/MySQL/SQLite) │
 │  (/findbug)                                                     │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -274,11 +278,44 @@ rails findbug:clear_buffers
 rails findbug:db:stats
 ```
 
-## Multi-Tenant Applications (Apartment/ros-apartment)
+## Database Support
 
-If you're using [ros-apartment](https://github.com/rails-on-services/apartment) or similar multi-tenant gems with PostgreSQL schemas, FindBug's tables need to stay in the public schema and the dashboard path should be excluded from tenant switching.
+As of v0.5.0 FindBug is database-agnostic. The install generator's migrations and the model layer detect your `ActiveRecord::Base.connection.adapter_name` at runtime and pick the right column types and SQL functions automatically.
 
-### 1. Exclude FindBug Models
+| Adapter            | JSON column | Time bucketing SQL                 |
+|--------------------|-------------|------------------------------------|
+| PostgreSQL/PostGIS | `jsonb`     | `date_trunc(...)`                  |
+| MySQL/Mysql2       | `json`      | `DATE_FORMAT(...)` / `DATE(...)`   |
+| SQLite             | `text` (with JSON serialisation in the model) | `strftime(...)` / `DATE(...)` |
+
+The JSON accessors on the models normalise reads to a native Ruby `Hash` / `Array` regardless of the underlying column type, so your application code is identical across adapters.
+
+If you're writing your own migrations against the same multi-DB strategy, the `Findbug::AdapterHelper` module is part of the public API:
+
+```ruby
+Findbug::AdapterHelper.json_column_type      # :jsonb / :json / :text
+Findbug::AdapterHelper.json_default({})      # adapter-appropriate default
+Findbug::AdapterHelper.date_trunc_sql("hour", "captured_at")
+```
+
+## Multi-Tenant Applications
+
+Multi-tenant Rails apps are supported, but the setup depends on *how* your app isolates tenants. The matrix below shows what's possible per adapter:
+
+| Adapter                  | Tenancy model                                                | FindBug support                                                                  |
+|--------------------------|--------------------------------------------------------------|----------------------------------------------------------------------------------|
+| PostgreSQL               | Schema-per-tenant (Apartment's default)                      | ✅ First-class — keep FindBug tables in the `public` schema (see below).         |
+| PostgreSQL/MySQL/SQLite  | Row-level (`tenant_id` column)                               | ✅ Nothing special — FindBug's tables aren't tenant-scoped.                      |
+| MySQL                    | Database-per-tenant (Apartment with `use_schemas = false`)   | ⚠️ Doable but awkward — point FindBug at a separate connection via `connects_to`. |
+| SQLite                   | File-per-tenant                                              | ❌ Not practical — use row-level scoping instead.                                |
+
+For the full discussion (including MySQL setup options), see the [Multi-tenant section in the docs](https://findbug.dev/docs#multi-tenant).
+
+### PostgreSQL + Apartment (schema-per-tenant)
+
+If you're using [ros-apartment](https://github.com/rails-on-services/apartment) with PostgreSQL schemas, FindBug's tables need to stay in the public schema and the dashboard path should be excluded from tenant switching.
+
+#### 1. Exclude FindBug Models
 
 Add FindBug models to the `excluded_models` list in `config/initializers/apartment.rb`:
 
@@ -293,7 +330,7 @@ Apartment.configure do |config|
 end
 ```
 
-### 2. Exclude FindBug Dashboard Path
+#### 2. Exclude FindBug Dashboard Path
 
 Add `/findbug` to your tenant switching middleware's excluded paths:
 
@@ -317,7 +354,7 @@ class SwitchTenantMiddleware < Apartment::Elevators::Generic
 end
 ```
 
-### 3. Run Migrations in Public Schema
+#### 3. Run Migrations in Public Schema
 
 Ensure FindBug migrations run in the public schema:
 

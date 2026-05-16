@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FindBug Documentation</title>
+  <meta name="description" content="Complete documentation for FindBug — self-hosted error tracking and performance monitoring for Rails.">
+  <link rel="canonical" href="https://findbug.dev/docs">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2l1.88 1.88'/%3E%3Cpath d='M14.12 3.88L16 2'/%3E%3Cpath d='M9 7.13v-1a3.003 3.003 0 1 1 6 0v1'/%3E%3Cpath d='M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6'/%3E%3Cpath d='M12 20v-9'/%3E%3Cpath d='M6.53 9C4.6 8.8 3 7.1 3 5'/%3E%3Cpath d='M6 13H2'/%3E%3Cpath d='M3 21c0-2.1 1.7-3.9 3.8-4'/%3E%3Cpath d='M20.97 5c0 2.1-1.6 3.8-3.5 4'/%3E%3Cpath d='M22 13h-4'/%3E%3Cpath d='M17.2 17c2.1.1 3.8 1.9 3.8 4'/%3E%3C/svg%3E">
+
+  <style>
+    :root {
+      --background: 0 0% 3.9%;
+      --foreground: 0 0% 98%;
+      --card: 0 0% 6%;
+      --muted: 0 0% 14.9%;
+      --muted-foreground: 0 0% 63.9%;
+      --border: 0 0% 14.9%;
+      --primary: 0 0% 98%;
+      --primary-foreground: 0 0% 9%;
+      --accent: 0 0% 14.9%;
+      --success: 142.1 76.2% 36.3%;
+      --info: 217.2 91.2% 59.8%;
+      --warning: 38 92% 50%;
+      --error: 0 84.2% 60.2%;
+      --radius: 0.5rem;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+      line-height: 1.65;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; transition: color 0.15s; }
+
+    /* ------- Navigation (same as index.html) ------- */
+    .site-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      background-color: hsl(var(--background) / 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid hsl(var(--border));
+    }
+    .nav-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      height: 3.5rem;
+      gap: 1.5rem;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .logo svg { width: 1.25rem; height: 1.25rem; }
+    .nav-links {
+      display: flex;
+      gap: 1.25rem;
+      flex: 1;
+      font-size: 0.875rem;
+    }
+    .nav-links a { color: hsl(var(--muted-foreground)); }
+    .nav-links a:hover { color: hsl(var(--foreground)); }
+    .nav-links a.active { color: hsl(var(--foreground)); }
+    .nav-right { display: flex; gap: 0.5rem; align-items: center; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+    }
+    .btn-sm { padding: 0.375rem 0.75rem; }
+    .btn-primary {
+      background-color: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+    .btn-primary:hover { background-color: hsl(var(--primary) / 0.9); }
+    .btn-outline {
+      border-color: hsl(var(--border));
+      background-color: transparent;
+    }
+    .btn-outline:hover { background-color: hsl(var(--accent)); }
+
+    /* ------- Docs Layout ------- */
+    .docs-shell {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 5rem 1.5rem 4rem;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 3rem;
+    }
+
+    /* Sidebar */
+    .docs-sidebar {
+      position: sticky;
+      top: 4.5rem;
+      align-self: start;
+      max-height: calc(100vh - 5rem);
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+    .docs-sidebar h4 {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: hsl(var(--muted-foreground));
+      margin: 1.25rem 0 0.5rem;
+    }
+    .docs-sidebar h4:first-child { margin-top: 0; }
+    .docs-sidebar ul { list-style: none; }
+    .docs-sidebar a {
+      display: block;
+      padding: 0.3rem 0.5rem;
+      font-size: 0.8125rem;
+      color: hsl(var(--muted-foreground));
+      border-radius: 0.375rem;
+      border-left: 2px solid transparent;
+    }
+    .docs-sidebar a:hover {
+      color: hsl(var(--foreground));
+      background-color: hsl(var(--muted) / 0.5);
+    }
+
+    /* Main content */
+    .docs-main { min-width: 0; }
+
+    .docs-main h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .docs-main .lead {
+      font-size: 1.125rem;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 2.5rem;
+    }
+    .docs-main h2 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-top: 3rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid hsl(var(--border));
+      scroll-margin-top: 4.5rem;
+    }
+    .docs-main h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-top: 2rem;
+      margin-bottom: 0.5rem;
+      scroll-margin-top: 4.5rem;
+    }
+    .docs-main h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+      color: hsl(var(--foreground) / 0.9);
+    }
+    .docs-main p {
+      margin-bottom: 1rem;
+      color: hsl(var(--foreground) / 0.92);
+    }
+    .docs-main ul, .docs-main ol {
+      margin: 0 0 1rem 1.5rem;
+      color: hsl(var(--foreground) / 0.92);
+    }
+    .docs-main li { margin-bottom: 0.35rem; }
+
+    /* Inline code */
+    .docs-main code {
+      font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+      background-color: hsl(var(--muted) / 0.6);
+      padding: 0.125rem 0.375rem;
+      border-radius: 0.25rem;
+      font-size: 0.85em;
+      color: hsl(var(--foreground));
+    }
+
+    /* Code blocks */
+    pre {
+      background-color: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      margin: 0.75rem 0 1.5rem;
+      font-size: 0.8125rem;
+      line-height: 1.6;
+    }
+    .docs-main pre code {
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+      color: hsl(var(--foreground));
+      font-size: inherit;
+    }
+    .kw   { color: #ff7b72; }   /* keyword - red/coral */
+    .str  { color: #a5d6ff; }   /* string - blue */
+    .sym  { color: #79c0ff; }   /* symbol - light blue */
+    .com  { color: hsl(var(--muted-foreground)); font-style: italic; }
+    .num  { color: #d2a8ff; }   /* number/literal - purple */
+    .var  { color: #ffa657; }   /* class - orange */
+
+    /* Callouts */
+    .callout {
+      border-left: 3px solid hsl(var(--info));
+      background-color: hsl(var(--info) / 0.08);
+      padding: 0.875rem 1rem;
+      border-radius: 0.375rem;
+      margin: 1rem 0 1.5rem;
+      font-size: 0.9rem;
+    }
+    .callout.warn {
+      border-left-color: hsl(var(--warning));
+      background-color: hsl(var(--warning) / 0.08);
+    }
+    .callout.success {
+      border-left-color: hsl(var(--success));
+      background-color: hsl(var(--success) / 0.08);
+    }
+    .callout strong { display: block; margin-bottom: 0.25rem; }
+    .callout p:last-child { margin-bottom: 0; }
+
+    /* Tables */
+    .docs-main table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.5rem 0 1.5rem;
+      font-size: 0.875rem;
+    }
+    .docs-main th, .docs-main td {
+      text-align: left;
+      padding: 0.625rem 0.75rem;
+      border-bottom: 1px solid hsl(var(--border));
+    }
+    .docs-main th {
+      font-weight: 600;
+      color: hsl(var(--muted-foreground));
+      background-color: hsl(var(--muted) / 0.3);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .docs-main td code { font-size: 0.8125rem; }
+
+    /* Footer */
+    .docs-footer {
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid hsl(var(--border));
+      color: hsl(var(--muted-foreground));
+      font-size: 0.875rem;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .docs-shell {
+        grid-template-columns: 1fr;
+        padding: 5rem 1rem 3rem;
+        gap: 1.5rem;
+      }
+      .docs-sidebar {
+        position: static;
+        max-height: none;
+        border-bottom: 1px solid hsl(var(--border));
+        padding-bottom: 1.5rem;
+      }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="site-nav">
+    <div class="nav-container">
+      <a href="/" class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 2l1.88 1.88"/><path d="M14.12 3.88L16 2"/>
+          <path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/>
+          <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/>
+          <path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/>
+          <path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/>
+          <path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/>
+          <path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>
+        </svg>
+        <span>FindBug</span>
+      </a>
+      <div class="nav-links">
+        <a href="/#features">Features</a>
+        <a href="/#comparison">Compare</a>
+        <a href="/#architecture">Architecture</a>
+        <a href="/#demo">Demo</a>
+        <a href="/docs" class="active">Docs</a>
+      </div>
+      <div class="nav-right">
+        <a href="/#demo" class="btn btn-primary btn-sm">Dashboard Demo</a>
+        <a href="https://github.com/ITSSOUMIT/findbug" target="_blank" class="btn btn-outline btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="docs-shell">
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar">
+      <h4>Getting Started</h4>
+      <ul>
+        <li><a href="#introduction">Introduction</a></li>
+        <li><a href="#requirements">Requirements</a></li>
+        <li><a href="#installation">Installation</a></li>
+        <li><a href="#quick-start">Quick start</a></li>
+      </ul>
+
+      <h4>Configuration</h4>
+      <ul>
+        <li><a href="#configuration">Overview</a></li>
+        <li><a href="#config-core">Core settings</a></li>
+        <li><a href="#config-errors">Error capture</a></li>
+        <li><a href="#config-performance">Performance</a></li>
+        <li><a href="#config-scrubbing">Data scrubbing</a></li>
+        <li><a href="#config-storage">Storage &amp; retention</a></li>
+        <li><a href="#config-dashboard">Dashboard</a></li>
+        <li><a href="#config-alerts">Alerts</a></li>
+        <li><a href="#config-misc">Release &amp; logger</a></li>
+      </ul>
+
+      <h4>Usage</h4>
+      <ul>
+        <li><a href="#capture-auto">Automatic capture</a></li>
+        <li><a href="#capture-manual">Manual capture</a></li>
+        <li><a href="#controller-helpers">Controller helpers</a></li>
+        <li><a href="#breadcrumbs">Breadcrumbs</a></li>
+        <li><a href="#performance-tracking">Performance tracking</a></li>
+      </ul>
+
+      <h4>Operations</h4>
+      <ul>
+        <li><a href="#dashboard">Dashboard</a></li>
+        <li><a href="#alerts">Alerts</a></li>
+        <li><a href="#rake-tasks">Rake tasks</a></li>
+        <li><a href="#database-support">Database support</a></li>
+        <li><a href="#multi-tenant">Multi-tenant apps</a></li>
+        <li><a href="#activejob-mode">ActiveJob mode</a></li>
+      </ul>
+
+      <h4>Reference</h4>
+      <ul>
+        <li><a href="#api-reference">API reference</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#testing">Testing</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main content -->
+    <main class="docs-main">
+
+      <h1>FindBug Documentation</h1>
+      <p class="lead">
+        Self-hosted error tracking and performance monitoring for Rails. Sentry-like
+        functionality, with every byte of data on your own infrastructure.
+      </p>
+
+      <!-- ============================================================
+           GETTING STARTED
+           ============================================================ -->
+
+      <h2 id="introduction">Introduction</h2>
+      <p>
+        FindBug is a Rails engine that captures exceptions and performance data from your
+        application, stores them in Redis (as a high-speed buffer) and your existing relational
+        database, and surfaces them through a built-in web dashboard mounted at
+        <code>/findbug</code>. There are no external services, API keys, or per-seat fees.
+      </p>
+      <p>What you get out of the box:</p>
+      <ul>
+        <li>Automatic exception capture from controllers, middleware, and <code>Rails.error</code></li>
+        <li>Performance instrumentation for HTTP requests and SQL with automatic N+1 detection</li>
+        <li>A web dashboard for browsing and resolving errors</li>
+        <li>Alerting over Email, Slack, Discord, or custom webhooks</li>
+        <li>A built-in background thread that persists Redis events to your database every 30 seconds (no Sidekiq required)</li>
+      </ul>
+
+      <h2 id="requirements">Requirements</h2>
+      <ul>
+        <li>Ruby 3.1 or newer</li>
+        <li>Rails 7.0 or newer (7.x and 8.x both supported)</li>
+        <li>Redis 4.0 or newer</li>
+        <li>A relational database — PostgreSQL, MySQL, or SQLite (see <a href="#database-support">Database Support</a>)</li>
+      </ul>
+
+      <h2 id="installation">Installation</h2>
+      <p>Add the gem to your <code>Gemfile</code>:</p>
+<pre><code><span class="kw">gem</span> <span class="str">"findbug"</span>, <span class="sym">"~&gt; 0.5.0"</span></code></pre>
+
+      <p>Install and run the generator:</p>
+<pre><code><span class="com">$</span> bundle install
+<span class="com">$</span> rails generate findbug:install
+<span class="com">$</span> rails db:migrate</code></pre>
+
+      <p>The generator creates:</p>
+      <ul>
+        <li><code>config/initializers/findbug.rb</code> — your configuration</li>
+        <li>Three migrations under <code>db/migrate/</code>:
+          <ul>
+            <li><code>create_findbug_error_events</code></li>
+            <li><code>create_findbug_performance_events</code></li>
+            <li><code>create_findbug_alert_channels</code></li>
+          </ul>
+        </li>
+      </ul>
+
+      <div class="callout success">
+        <strong>Database-agnostic migrations</strong>
+        <p>As of v0.5.0 the migrations detect your adapter at <code>db:migrate</code> time and pick the right column type — <code>jsonb</code> on PostgreSQL, <code>json</code> on MySQL, <code>text</code> on SQLite. No manual editing needed.</p>
+      </div>
+
+      <h2 id="quick-start">Quick start</h2>
+      <p>After running the migrations, set dashboard credentials:</p>
+<pre>
+<code><span class="kw">export</span> FINDBUG_USERNAME=admin
+<span class="kw">export</span> FINDBUG_PASSWORD=your-secure-password</code>
+</pre>
+
+      <p>Then start your app and visit <code>http://localhost:3000/findbug</code>.</p>
+      <p>FindBug is now:</p>
+      <ul>
+        <li>Capturing unhandled exceptions automatically</li>
+        <li>Monitoring 10% of requests (default <code>performance_sample_rate</code>)</li>
+        <li>Flushing the Redis buffer to your database every 30 seconds</li>
+      </ul>
+
+      <!-- ============================================================
+           CONFIGURATION
+           ============================================================ -->
+
+      <h2 id="configuration">Configuration</h2>
+      <p>
+        All configuration lives in <code>config/initializers/findbug.rb</code>. Every setting has
+        a sensible default — you only need to override what's different in your environment.
+      </p>
+
+      <h3 id="config-core">Core settings</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>enabled</code></td><td><code>true</code></td><td>Turn FindBug on/off globally. Set to <code>false</code> in test envs.</td></tr>
+          <tr><td><code>redis_url</code></td><td><code>redis://localhost:6379/1</code></td><td>Redis URL for the buffer. We recommend a dedicated database number.</td></tr>
+          <tr><td><code>redis_pool_size</code></td><td><code>5</code></td><td>Size of the dedicated Redis connection pool.</td></tr>
+          <tr><td><code>redis_pool_timeout</code></td><td><code>1</code></td><td>Seconds to wait for a connection before giving up (fail-fast).</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="config-errors">Error capture</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>sample_rate</code></td><td><code>1.0</code></td><td>Fraction of errors to capture (0.0–1.0). Lower for very high-traffic apps.</td></tr>
+          <tr><td><code>ignored_exceptions</code></td><td><code>[]</code></td><td>Array of exception classes to ignore.</td></tr>
+          <tr><td><code>ignored_paths</code></td><td><code>[]</code></td><td>Array of regexes — requests matching these paths are skipped.</td></tr>
+        </tbody>
+      </table>
+
+<pre><code><span class="var">Findbug</span>.configure <span class="kw">do</span> |config|
+  config.sample_rate = <span class="num">1.0</span>
+  config.ignored_exceptions = [
+    <span class="var">ActiveRecord</span>::<span class="var">RecordNotFound</span>,
+    <span class="var">ActionController</span>::<span class="var">RoutingError</span>
+  ]
+  config.ignored_paths = [<span class="str">/^\/health/</span>, <span class="str">/^\/assets/</span>]
+<span class="kw">end</span></code></pre>
+
+      <h3 id="config-performance">Performance monitoring</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>performance_enabled</code></td><td><code>true</code></td><td>Master switch for the performance instrumenter.</td></tr>
+          <tr><td><code>performance_sample_rate</code></td><td><code>0.1</code></td><td>Fraction of requests to instrument (10% is fine for most apps).</td></tr>
+          <tr><td><code>slow_request_threshold_ms</code></td><td><code>0</code></td><td>Only persist requests slower than this. <code>0</code> = all sampled requests.</td></tr>
+          <tr><td><code>slow_query_threshold_ms</code></td><td><code>100</code></td><td>SQL queries above this duration are flagged in the dashboard.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="config-scrubbing">Data scrubbing (security)</h3>
+      <p>
+        FindBug filters sensitive request and context data before it touches Redis.
+        Field names matching <code>scrub_fields</code> are replaced with <code>[FILTERED]</code>.
+      </p>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>scrub_fields</code></td><td>password, token, api_key, secret, credit_card, ssn, …</td><td>Field names to redact.</td></tr>
+          <tr><td><code>scrub_headers</code></td><td><code>true</code></td><td>Strips <code>Authorization</code>, <code>Cookie</code>, and similar headers.</td></tr>
+          <tr><td><code>scrub_header_names</code></td><td><code>[]</code></td><td>Additional header names to redact.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="config-storage">Storage &amp; retention</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>retention_days</code></td><td><code>30</code></td><td>Older records are removed by the cleanup job.</td></tr>
+          <tr><td><code>max_buffer_size</code></td><td><code>10_000</code></td><td>Hard cap on Redis buffer entries — protects Redis memory.</td></tr>
+          <tr><td><code>buffer_ttl</code></td><td><code>86_400</code></td><td>Redis key TTL in seconds (24h). Stale buffered events expire automatically.</td></tr>
+          <tr><td><code>persist_interval</code></td><td><code>30</code></td><td>How often (in seconds) the background thread flushes Redis to the DB.</td></tr>
+          <tr><td><code>persist_batch_size</code></td><td><code>100</code></td><td>How many events to batch-insert per flush.</td></tr>
+          <tr><td><code>auto_persist</code></td><td><code>true</code></td><td>Use the built-in thread. Set to <code>false</code> to drive persistence via ActiveJob.</td></tr>
+          <tr><td><code>queue_name</code></td><td><code>"findbug"</code></td><td>Queue name when running in ActiveJob mode.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="config-dashboard">Dashboard</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>web_username</code></td><td><code>nil</code></td><td>HTTP basic-auth username. Dashboard is disabled unless both username and password are set.</td></tr>
+          <tr><td><code>web_password</code></td><td><code>nil</code></td><td>HTTP basic-auth password.</td></tr>
+          <tr><td><code>web_path</code></td><td><code>"/findbug"</code></td><td>Mount path of the engine.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warn">
+        <strong>Don't commit credentials</strong>
+        <p>Drive these from <code>ENV["FINDBUG_USERNAME"]</code> / <code>ENV["FINDBUG_PASSWORD"]</code>. The dashboard is automatically disabled if either is blank, so missing env vars in CI are safe.</p>
+      </div>
+
+      <h3 id="config-alerts">Alerts</h3>
+      <p>
+        Alert channels (Email, Slack, Discord, Webhook) are created at runtime through the
+        dashboard at <code>/findbug/alerts</code> — no code changes required.
+        The only thing you configure in code is the throttle window:
+      </p>
+<pre><code><span class="var">Findbug</span>.configure <span class="kw">do</span> |config|
+  config.alerts <span class="kw">do</span> |alerts|
+    alerts.throttle_period = <span class="num">5</span>.minutes
+  <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+      <p>See the <a href="#alerts">Alerts</a> section for channel-by-channel details.</p>
+
+      <h3 id="config-misc">Release &amp; logger</h3>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>release</code></td><td><code>ENV["FINDBUG_RELEASE"]</code></td><td>A version identifier (e.g. git SHA). Useful for tracking which deploy introduced an error.</td></tr>
+          <tr><td><code>environment</code></td><td><code>Rails.env</code></td><td>Override the environment label.</td></tr>
+          <tr><td><code>logger</code></td><td><code>Rails.logger</code></td><td>Replace with your own logger if needed.</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ============================================================
+           USAGE
+           ============================================================ -->
+
+      <h2 id="capture-auto">Automatic error capture</h2>
+      <p>FindBug captures these out of the box:</p>
+      <ul>
+        <li>Unhandled exceptions raised in any controller action</li>
+        <li>Errors reported through <code>Rails.error.handle</code> / <code>Rails.error.report</code></li>
+        <li>Any exception that bubbles up through the Rack middleware stack</li>
+      </ul>
+      <p>You generally don't need to do anything to enable this — it's wired up by the Railtie when the engine boots.</p>
+
+      <h2 id="capture-manual">Manual error capture</h2>
+
+      <p>To capture an exception you've rescued, call <code>Findbug.capture_exception</code>:</p>
+<pre><code><span class="kw">begin</span>
+  risky_operation
+<span class="kw">rescue</span> =&gt; e
+  <span class="var">Findbug</span>.capture_exception(e, user_id: current_user.id)
+<span class="kw">end</span></code></pre>
+
+      <p>For non-exception events (warnings, informational messages), use <code>capture_message</code>:</p>
+<pre><code><span class="var">Findbug</span>.capture_message(<span class="str">"Rate limit exceeded"</span>, <span class="sym">:warning</span>, user_id: <span class="num">123</span>)</code></pre>
+      <p>Severity levels: <code>:info</code>, <code>:warning</code>, <code>:error</code>.</p>
+
+      <h2 id="controller-helpers">Controller helpers</h2>
+      <p>
+        The Railtie installs several helper methods on <code>ActionController::Base</code> and
+        <code>ActionController::API</code>. Use them to attach request-scoped context that's
+        included with every error captured during the request.
+      </p>
+
+      <h3>findbug_set_user(user)</h3>
+      <p>Attach the current user. <code>id</code>, <code>email</code>, and <code>username</code> (or <code>name</code>) are extracted via <code>try</code>.</p>
+<pre><code><span class="kw">before_action</span> :set_findbug_context
+
+<span class="kw">def</span> set_findbug_context
+  findbug_set_user(current_user)
+<span class="kw">end</span></code></pre>
+
+      <h3>findbug_set_context(data)</h3>
+      <p>Deep-merge arbitrary key-value data into the current request's context.</p>
+<pre><code>findbug_set_context(
+  plan: current_user&amp;.plan,
+  organization_id: current_org&amp;.id
+)</code></pre>
+
+      <h3>findbug_tag(key, value)</h3>
+      <p>Add a single tag — short, filterable values that show up in the dashboard's filter bar.</p>
+<pre><code>findbug_tag(<span class="sym">:region</span>, <span class="str">"us-east-1"</span>)</code></pre>
+
+      <h3>findbug_capture(exception, extra = {})</h3>
+      <p>Capture an exception with the current request context already merged in.</p>
+<pre><code><span class="kw">rescue</span> <span class="var">ExternalAPIError</span> =&gt; e
+  findbug_capture(e, api: <span class="str">"payment_gateway"</span>)
+  <span class="com"># handle gracefully</span>
+<span class="kw">end</span></code></pre>
+
+      <h2 id="breadcrumbs">Breadcrumbs</h2>
+      <p>
+        Breadcrumbs are a trail of small events leading up to an error. They're per-request
+        and cleared automatically after the response is sent.
+      </p>
+<pre><code>findbug_breadcrumb(<span class="str">"User clicked checkout"</span>, category: <span class="str">"ui"</span>)
+findbug_breadcrumb(<span class="str">"Payment API called"</span>, category: <span class="str">"http"</span>, data: { amount: <span class="num">99.99</span> })</code></pre>
+      <p>When an error fires later in the request, the breadcrumbs are attached to it. View them on the error detail page in the dashboard.</p>
+
+      <h2 id="performance-tracking">Performance tracking</h2>
+      <p>Automatic instrumentation captures, per request:</p>
+      <ul>
+        <li>Total duration</li>
+        <li>SQL query count and total DB time</li>
+        <li>Slow queries (above <code>slow_query_threshold_ms</code>)</li>
+        <li>N+1 patterns (detected automatically)</li>
+        <li>View rendering count and time</li>
+      </ul>
+
+      <p>To track a custom operation (e.g. an outbound API call), wrap it in <code>Findbug.track_performance</code>:</p>
+<pre><code><span class="var">Findbug</span>.track_performance(<span class="str">"external_api_call"</span>) <span class="kw">do</span>
+  <span class="var">ExternalAPI</span>.fetch_data
+<span class="kw">end</span></code></pre>
+      <p>Custom transactions get their own row in the <code>findbug_performance_events</code> table with <code>transaction_type = "custom"</code>.</p>
+
+      <!-- ============================================================
+           OPERATIONS
+           ============================================================ -->
+
+      <h2 id="dashboard">Dashboard</h2>
+      <p>The dashboard lives at <code>config.web_path</code> (default <code>/findbug</code>). It exposes:</p>
+      <ul>
+        <li><strong>Overview</strong> — aggregate stats, the most recent unresolved errors, and a throughput chart.</li>
+        <li><strong>Errors</strong> — filterable list of all error events. Click through to see backtrace, request data, breadcrumbs, and user context.</li>
+        <li><strong>Performance</strong> — slowest transactions, N+1 hotspots, throughput over time.</li>
+        <li><strong>Alerts</strong> — manage alert channels (see below).</li>
+      </ul>
+      <p>Authentication is plain HTTP basic auth. The dashboard is automatically disabled if <code>web_username</code> or <code>web_password</code> is blank.</p>
+
+      <h2 id="alerts">Alerts</h2>
+      <p>FindBug ships with four built-in alert channels. Configure them at <code>/findbug/alerts</code>:</p>
+
+      <table>
+        <thead><tr><th>Channel</th><th>What you configure</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Email</strong></td><td>Recipient addresses. Sends via your app's existing ActionMailer setup.</td></tr>
+          <tr><td><strong>Slack</strong></td><td>Incoming-webhook URL.</td></tr>
+          <tr><td><strong>Discord</strong></td><td>Webhook URL.</td></tr>
+          <tr><td><strong>Webhook</strong></td><td>Any HTTPS endpoint — FindBug POSTs JSON.</td></tr>
+        </tbody>
+      </table>
+
+      <p>
+        Channel configurations are stored encrypted in the <code>findbug_alert_channels</code> table,
+        so the alert UI uses Rails encryption — make sure you've set up
+        <code>active_record.encryption</code> in your Rails app (see
+        <a href="https://guides.rubyonrails.org/active_record_encryption.html" target="_blank">the Rails guide</a>).
+      </p>
+
+      <h3>Throttling</h3>
+      <p>
+        Same-error notifications are throttled by fingerprint. The default window is 5 minutes —
+        configurable via <code>config.alerts.throttle_period</code>.
+      </p>
+
+      <h3>Sending a test notification</h3>
+      <p>Each channel in the UI has a "Send test" button that fires a dummy payload to the channel — useful for verifying webhook URLs and email addresses before going live.</p>
+
+      <h2 id="rake-tasks">Rake tasks</h2>
+      <p>FindBug ships with several maintenance tasks. Run <code>rake -T findbug</code> for the live list.</p>
+      <table>
+        <thead><tr><th>Task</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>rails findbug:status</code></td><td>Show current configuration, Redis buffer lengths, and circuit-breaker state. Use this first when debugging.</td></tr>
+          <tr><td><code>rails findbug:test</code></td><td>Raise and capture a test exception. Verifies the capture pipeline end-to-end.</td></tr>
+          <tr><td><code>rails findbug:flush</code></td><td>Manually drain the Redis buffer to the database. Useful when shutting down or debugging.</td></tr>
+          <tr><td><code>rails findbug:cleanup</code></td><td>Run the retention cleanup immediately. Same job the background thread runs daily.</td></tr>
+          <tr><td><code>rails findbug:clear_buffers</code></td><td>Wipe the Redis buffer. <strong>Drops un-persisted events</strong> — use with care.</td></tr>
+          <tr><td><code>rails findbug:db:stats</code></td><td>Print row counts for the FindBug tables.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="database-support">Database support</h2>
+      <p>
+        As of <strong>v0.5.0</strong> FindBug is database-agnostic. It introspects your
+        <code>ActiveRecord::Base.connection.adapter_name</code> at migration and query time and
+        picks the correct column types and SQL functions automatically.
+      </p>
+      <table>
+        <thead><tr><th>Adapter</th><th>JSON column type</th><th>Time bucketing SQL</th></tr></thead>
+        <tbody>
+          <tr><td>PostgreSQL / PostGIS</td><td><code>jsonb</code></td><td><code>date_trunc(...)</code></td></tr>
+          <tr><td>MySQL / Mysql2</td><td><code>json</code></td><td><code>DATE_FORMAT(...)</code> / <code>DATE(...)</code></td></tr>
+          <tr><td>SQLite</td><td><code>text</code> (with JSON serialisation in the model)</td><td><code>strftime(...)</code> / <code>DATE(...)</code></td></tr>
+        </tbody>
+      </table>
+      <p>
+        The model's JSON accessors normalise reads to native Ruby <code>Hash</code> / <code>Array</code>
+        regardless of the underlying column type — your code is identical across adapters.
+      </p>
+
+      <h2 id="multi-tenant">Multi-tenant applications</h2>
+      <p>
+        FindBug works with multi-tenant Rails apps, but the setup depends on
+        <em>how</em> your app isolates tenants. The matrix below shows what's possible per database adapter.
+      </p>
+
+      <table>
+        <thead><tr><th>Adapter</th><th>Tenancy model</th><th>FindBug support</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>PostgreSQL</strong></td>
+            <td>Schema-per-tenant (Apartment's default)</td>
+            <td>✅ First-class — keep FindBug tables in the <code>public</code> schema (instructions below).</td>
+          </tr>
+          <tr>
+            <td><strong>PostgreSQL · MySQL · SQLite</strong></td>
+            <td>Row-level (<code>tenant_id</code> column on each table)</td>
+            <td>✅ Nothing special — FindBug tables aren't tenant-scoped anyway.</td>
+          </tr>
+          <tr>
+            <td><strong>MySQL</strong></td>
+            <td>Database-per-tenant (Apartment with <code>use_schemas = false</code>)</td>
+            <td>⚠️ Doable but awkward — you'll need a shared database the app connection can reach for FindBug's tables, plus cross-database references. Not recommended unless tenant count is small.</td>
+          </tr>
+          <tr>
+            <td><strong>SQLite</strong></td>
+            <td>File-per-tenant</td>
+            <td>❌ Not practical — Apartment supports it nominally, but SQLite isn't typically chosen for multi-tenant production apps. Use row-level scoping instead.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>TL;DR</strong>
+        <p>If you're on PostgreSQL with <a href="https://github.com/rails-on-services/apartment" target="_blank">ros-apartment</a>, follow the three steps below. On any other adapter — or with row-level multi-tenancy — FindBug works out of the box because its tables aren't part of your tenant data model.</p>
+      </div>
+
+      <h3>PostgreSQL + Apartment (schema-per-tenant)</h3>
+      <p>FindBug's tables must live in the public schema, and the dashboard path must bypass tenant switching.</p>
+
+      <h4>1. Exclude FindBug models</h4>
+<pre><code><span class="var">Apartment</span>.configure <span class="kw">do</span> |config|
+  config.excluded_models = %w[
+    <span class="var">Findbug</span>::<span class="var">ErrorEvent</span>
+    <span class="var">Findbug</span>::<span class="var">PerformanceEvent</span>
+    <span class="var">Findbug</span>::<span class="var">AlertChannel</span>
+  ]
+<span class="kw">end</span></code></pre>
+
+      <h4>2. Exclude the dashboard path from your tenant elevator</h4>
+<pre><code><span class="kw">class</span> <span class="var">SwitchTenantMiddleware</span> &lt; <span class="var">Apartment</span>::<span class="var">Elevators</span>::<span class="var">Generic</span>
+  EXCLUDED_PATHS = %w[/findbug].freeze
+
+  <span class="kw">def</span> parse_tenant_name(request)
+    <span class="kw">return</span> nil <span class="kw">if</span> <span class="var">EXCLUDED_PATHS</span>.any? { |p| request.path.start_with?(p) }
+    <span class="com"># ... your tenant logic</span>
+  <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+
+      <h4>3. Run migrations in the public schema</h4>
+      <p>Use <code>rails db:migrate</code> as normal — Apartment will skip the excluded models when iterating through tenants, so the FindBug tables are created once in <code>public</code>.</p>
+
+      <h3>MySQL + Apartment (database-per-tenant)</h3>
+      <p>
+        MySQL has no schemas in the PostgreSQL sense — <code>SCHEMA</code> is just an alias for
+        <code>DATABASE</code>. Apartment isolates tenants by giving each one its own MySQL database
+        and switching the connection per request. This works, but FindBug's shared tables need a home.
+      </p>
+      <p>Two viable approaches:</p>
+      <ul>
+        <li>
+          <strong>Recommended — separate connection</strong>:
+          point FindBug's models at a dedicated "operational" database via
+          <code>connects_to</code>. Keeps FindBug's data fully isolated from tenant data,
+          and avoids the cross-database <code>GRANT</code>/reference gymnastics.
+        </li>
+        <li>
+          <strong>Shared base database</strong>: store FindBug tables in your "main" database
+          (the one Apartment connects to before switching). You'll need
+          <code>GRANT SELECT, INSERT, UPDATE, DELETE</code> on those tables for the
+          per-tenant DB user, and to reference them as
+          <code>main_db.findbug_error_events</code> if your tenant connections can't see them by default.
+        </li>
+      </ul>
+      <p>In both cases, you still:</p>
+      <ul>
+        <li>Add FindBug models to <code>Apartment.excluded_models</code> so it doesn't try to migrate them per tenant.</li>
+        <li>Exclude <code>/findbug</code> from your tenant elevator (same code as the PostgreSQL example above).</li>
+      </ul>
+
+      <h3>SQLite multi-tenancy</h3>
+      <p>
+        SQLite has no schemas and no concept of "current database" — Apartment's only option is
+        a separate <code>.sqlite3</code> file per tenant. This is rarely used in real applications
+        and pairs poorly with FindBug (no shared place for the FindBug tables to live without an
+        <code>ATTACH</code> dance on every connection).
+      </p>
+      <p>
+        If you're on SQLite and need tenant isolation, use <strong>row-level multi-tenancy</strong>
+        instead (a <code>tenant_id</code> column on your domain tables, scoped via
+        <code>default_scope</code> or a gem like <code>acts_as_tenant</code>).
+        FindBug's tables aren't tenant-scoped, so no extra setup is needed.
+      </p>
+
+      <h2 id="activejob-mode">ActiveJob mode</h2>
+      <p>By default a built-in background thread handles persistence. To use ActiveJob instead (with Sidekiq, GoodJob, Solid Queue, etc.):</p>
+<pre><code><span class="com"># config/initializers/findbug.rb</span>
+config.auto_persist = <span class="kw">false</span></code></pre>
+      <p>Then schedule the jobs with your scheduler of choice:</p>
+<pre><code><span class="com"># Every 30 seconds</span>
+<span class="var">Findbug</span>::<span class="var">PersistJob</span>.perform_later
+
+<span class="com"># Daily</span>
+<span class="var">Findbug</span>::<span class="var">CleanupJob</span>.perform_later</code></pre>
+      <p>The queue name is taken from <code>config.queue_name</code> (default <code>"findbug"</code>).</p>
+
+      <!-- ============================================================
+           REFERENCE
+           ============================================================ -->
+
+      <h2 id="api-reference">API reference</h2>
+
+      <h3>Module-level</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>Findbug.config</code></td><td>Access the singleton <code>Configuration</code> object.</td></tr>
+          <tr><td><code>Findbug.configure { |c| ... }</code></td><td>Configure FindBug at startup. Validates and returns the config.</td></tr>
+          <tr><td><code>Findbug.enabled?</code></td><td><code>true</code> when both <code>config.enabled</code> and <code>config.redis_url</code> are set.</td></tr>
+          <tr><td><code>Findbug.capture_exception(exception, context = {})</code></td><td>Capture a rescued exception with optional context.</td></tr>
+          <tr><td><code>Findbug.capture_message(message, level = :info, context = {})</code></td><td>Capture a non-exception event.</td></tr>
+          <tr><td><code>Findbug.track_performance(name) { ... }</code></td><td>Wrap a block in a custom performance transaction.</td></tr>
+          <tr><td><code>Findbug.logger</code></td><td>Internal logger — defaults to <code>Rails.logger</code>.</td></tr>
+          <tr><td><code>Findbug.reset!</code></td><td>Reset cached config/logger/pool. Useful in tests.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Controller helpers</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>findbug_set_user(user)</code></td><td>Attach the current user (id / email / username are auto-extracted).</td></tr>
+          <tr><td><code>findbug_set_context(hash)</code></td><td>Deep-merge keys into the current request's context.</td></tr>
+          <tr><td><code>findbug_tag(key, value)</code></td><td>Add a single filterable tag.</td></tr>
+          <tr><td><code>findbug_breadcrumb(message, category:, data: {})</code></td><td>Record a breadcrumb for the current request.</td></tr>
+          <tr><td><code>findbug_capture(exception, extra = {})</code></td><td>Capture an exception with the current request context already merged.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Adapter helper</h3>
+      <p>Useful if you're extending FindBug or writing your own migrations against the same multi-DB strategy:</p>
+      <table>
+        <thead><tr><th>Method</th><th>Returns</th></tr></thead>
+        <tbody>
+          <tr><td><code>Findbug::AdapterHelper.adapter_name</code></td><td>Lower-cased name, e.g. <code>"postgresql"</code>.</td></tr>
+          <tr><td><code>Findbug::AdapterHelper.postgresql? / mysql? / sqlite?</code></td><td>Boolean predicates.</td></tr>
+          <tr><td><code>Findbug::AdapterHelper.json_column_type</code></td><td><code>:jsonb</code>, <code>:json</code>, or <code>:text</code>.</td></tr>
+          <tr><td><code>Findbug::AdapterHelper.json_default(value)</code></td><td>Adapter-appropriate column default for a JSON field.</td></tr>
+          <tr><td><code>Findbug::AdapterHelper.date_trunc_sql(interval, column)</code></td><td>Truncate-by-time SQL for <code>"minute"</code>, <code>"hour"</code>, or <code>"day"</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="architecture">Architecture</h2>
+      <p>FindBug is built around one rule: <strong>never block the user's request</strong>. Here's how a captured event flows through the system:</p>
+      <ol>
+        <li><strong>Exception occurs</strong> in your app.</li>
+        <li><strong>Middleware catches it</strong> (or you call <code>Findbug.capture_exception</code>).</li>
+        <li><strong>Scrubber filters</strong> sensitive fields from params, headers, and context.</li>
+        <li><strong>Redis buffer write</strong> — a background thread pushes the event to a Redis list. ~1–2 ms, never blocks the request.</li>
+        <li><strong>Circuit breaker</strong> — if Redis is unreachable, after 5 failures the breaker opens and capture is silently skipped for 30 seconds.</li>
+        <li><strong>Background persister</strong> — every <code>persist_interval</code> seconds (default 30s) pulls batches of events from Redis and bulk-inserts into your DB.</li>
+        <li><strong>Aggregation</strong> — errors are grouped by fingerprint (class + normalised backtrace). Repeats increment <code>occurrence_count</code>; perf events are stored individually for percentile analysis.</li>
+        <li><strong>Dashboard</strong> queries the DB on demand.</li>
+      </ol>
+
+      <h3>Why a dedicated Redis connection pool?</h3>
+      <p>
+        FindBug maintains its own connection pool, separate from your app's Redis (or Sidekiq's).
+        That way a spike in error capture can't starve your cache or job queue of connections.
+      </p>
+
+      <h3>Why aggregate by fingerprint?</h3>
+      <p>
+        A single bug can fire thousands of times. Without aggregation, each one would be its own
+        row — making the dashboard useless. The fingerprint groups events by exception class and
+        the top stack frames, so you see "this bug occurred 1,243 times" rather than 1,243 rows.
+      </p>
+
+      <h2 id="testing">Testing</h2>
+      <p>FindBug ships with a comprehensive RSpec suite. Clone the repo and run it locally:</p>
+<pre><code><span class="com">$</span> git clone https://github.com/ITSSOUMIT/findbug.git
+<span class="com">$</span> <span class="kw">cd</span> findbug
+<span class="com">$</span> bundle install
+<span class="com">$</span> bundle exec rspec</code></pre>
+
+      <p>The suite runs against an in-memory SQLite database to exercise the adapter-agnostic code paths end-to-end, with adapter detection stubbed for PostgreSQL and MySQL-specific behaviour.</p>
+
+      <h3>Disabling FindBug in tests</h3>
+      <p>The default initializer already does this:</p>
+<pre><code>config.enabled = !<span class="var">Rails</span>.env.test?</code></pre>
+
+      <h2 id="troubleshooting">Troubleshooting</h2>
+
+      <h3>"Dashboard returns 401 Unauthorized"</h3>
+      <p>Make sure both <code>FINDBUG_USERNAME</code> and <code>FINDBUG_PASSWORD</code> are set in the environment. The dashboard is automatically disabled when either is blank — that's a safety feature.</p>
+
+      <h3>"Errors are captured but never show up in the dashboard"</h3>
+      <p>The background persister might not be running. Check:</p>
+      <ul>
+        <li><code>rails findbug:status</code> — does it show a non-zero <em>Error Queue Length</em>?</li>
+        <li>If yes, run <code>rails findbug:flush</code> to drain manually.</li>
+        <li>Confirm <code>auto_persist</code> is <code>true</code> (or that you've scheduled <code>Findbug::PersistJob</code> in ActiveJob mode).</li>
+      </ul>
+
+      <h3>"Circuit breaker is open"</h3>
+      <p>FindBug stopped trying to write to Redis after 5 consecutive failures. It will retry automatically after 30 seconds. Check that <code>config.redis_url</code> points to a reachable Redis instance.</p>
+
+      <h3>"Migrations fail on MySQL with 'JSON column can't have a default value'"</h3>
+      <p>As of v0.5.0 the migrations skip the default on MySQL automatically (MySQL pre-8.0.13 doesn't support JSON defaults). If you generated the migrations on an older FindBug version, regenerate them with <code>rails generate findbug:install</code> and re-run <code>db:migrate</code>.</p>
+
+      <h3>"`uninitialized constant Findbug::AdapterHelper`" in a migration</h3>
+      <p>This typically happens if the FindBug gem isn't loaded when the migration runs — make sure it's in your <code>Gemfile</code> outside any group restrictions (or include the <code>db</code> group your migrations run under).</p>
+
+      <div class="docs-footer">
+        <div>FindBug v0.5.0 · MIT License · Built by <a href="https://github.com/ITSSOUMIT" target="_blank" style="color: hsl(var(--foreground)); text-decoration: underline;">Soumit Das</a></div>
+        <div><a href="https://github.com/ITSSOUMIT/findbug" target="_blank" style="color: hsl(var(--foreground)); text-decoration: underline;">GitHub →</a></div>
+      </div>
+
+    </main>
+  </div>
+
+</body>
+</html>

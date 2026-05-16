@@ -27,14 +27,15 @@ module Findbug
   #     t.timestamps
   #   end
   #
-  # WHY JSONB FOR CONTEXT?
-  # ======================
+  # WHY OVERRIDE JSON ACCESSORS?
+  # =============================
   #
-  # Context is semi-structured - different errors have different context.
-  # JSONB (in PostgreSQL) or JSON (in other DBs) lets us store any shape
-  # of data without schema migrations.
+  # The column type for context/request_data varies by adapter:
+  #   PostgreSQL → jsonb  (AR returns Hash natively)
+  #   MySQL      → json   (AR returns Hash natively)
+  #   SQLite     → text   (AR returns raw JSON String)
   #
-  # For querying, we create GIN indexes on commonly queried paths.
+  # The overrides below normalise both cases so callers always get a Hash.
   #
   class ErrorEvent < ActiveRecord::Base
     self.table_name = "findbug_error_events"
@@ -54,6 +55,33 @@ module Findbug
     validates :exception_class, presence: true
     validates :status, inclusion: { in: [STATUS_UNRESOLVED, STATUS_RESOLVED, STATUS_IGNORED] }
     validates :severity, inclusion: { in: [SEVERITY_ERROR, SEVERITY_WARNING, SEVERITY_INFO] }
+
+    # JSON field accessors — normalise across adapters (jsonb/json/text).
+    # Reader always returns a Hash; writer stores a JSON string on text columns
+    # and the native object on json/jsonb columns.
+    %i[context request_data].each do |field|
+      define_method(field) do
+        val = read_attribute(field)
+        return {} if val.nil?
+        val.is_a?(String) ? JSON.parse(val) : val
+      rescue JSON::ParserError
+        {}
+      end
+
+      define_method(:"#{field}=") do |val|
+        col_type = self.class.columns_hash[field.to_s]&.type
+        if col_type == :text
+          serialized = case val
+                       when nil    then nil
+                       when String then val
+                       else             val.to_json
+                       end
+          write_attribute(field, serialized)
+        else
+          write_attribute(field, val)
+        end
+      end
+    end
 
     # Scopes
     scope :unresolved, -> { where(status: STATUS_UNRESOLVED) }

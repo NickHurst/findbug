@@ -2,6 +2,7 @@
 
 require_relative "findbug/version"
 require_relative "findbug/configuration"
+require_relative "findbug/adapter_helper"
 
 # Findbug - Self-hosted error tracking and performance monitoring for Rails
 #

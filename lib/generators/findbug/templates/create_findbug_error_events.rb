@@ -9,9 +9,9 @@ class CreateFindbugErrorEvents < ActiveRecord::Migration<%= migration_version %>
       t.text :message
       t.text :backtrace
 
-      # Context (stored as JSON for flexibility)
-      t.jsonb :context, default: {}
-      t.jsonb :request_data, default: {}
+      # Context (stored as JSON for flexibility; type chosen based on adapter)
+      t.column :context,      Findbug::AdapterHelper.json_column_type, default: Findbug::AdapterHelper.json_default({})
+      t.column :request_data, Findbug::AdapterHelper.json_column_type, default: Findbug::AdapterHelper.json_default({})
 
       # Metadata
       t.string :environment

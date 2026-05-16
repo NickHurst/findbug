@@ -20,13 +20,13 @@ class CreateFindbugPerformanceEvents < ActiveRecord::Migration<%= migration_vers
 
       # Query tracking
       t.integer :query_count, default: 0
-      t.jsonb :slow_queries, default: []
-      t.jsonb :n_plus_one_queries, default: []
+      t.column :slow_queries,       Findbug::AdapterHelper.json_column_type, default: Findbug::AdapterHelper.json_default([])
+      t.column :n_plus_one_queries, Findbug::AdapterHelper.json_column_type, default: Findbug::AdapterHelper.json_default([])
       t.boolean :has_n_plus_one, default: false
       t.integer :view_count, default: 0
 
       # Context
-      t.jsonb :context, default: {}
+      t.column :context, Findbug::AdapterHelper.json_column_type, default: Findbug::AdapterHelper.json_default({})
 
       # Metadata
       t.string :environment

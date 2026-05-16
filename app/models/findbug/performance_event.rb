@@ -17,11 +17,11 @@ module Findbug
   #     t.float :db_time_ms, default: 0
   #     t.float :view_time_ms, default: 0
   #     t.integer :query_count, default: 0
-  #     t.jsonb :slow_queries, default: []
-  #     t.jsonb :n_plus_one_queries, default: []
+  #     t.column :slow_queries, <json_type>, default: []
+  #     t.column :n_plus_one_queries, <json_type>, default: []
   #     t.boolean :has_n_plus_one, default: false
   #     t.integer :view_count, default: 0
-  #     t.jsonb :context, default: {}
+  #     t.column :context, <json_type>, default: {}
   #     t.string :environment
   #     t.string :release_version
   #     t.datetime :captured_at
@@ -47,6 +47,33 @@ module Findbug
     TYPE_REQUEST = "request"
     TYPE_CUSTOM = "custom"
     TYPE_JOB = "job"
+
+    # JSON field accessors — normalise across adapters (jsonb/json/text).
+    # Reader returns the native Array/Hash; writer serialises to JSON string
+    # for text columns and passes through to AR's type system otherwise.
+    { slow_queries: [], n_plus_one_queries: [], context: {} }.each do |field, empty|
+      define_method(field) do
+        val = read_attribute(field)
+        return empty.dup if val.nil?
+        val.is_a?(String) ? JSON.parse(val) : val
+      rescue JSON::ParserError
+        empty.dup
+      end
+
+      define_method(:"#{field}=") do |val|
+        col_type = self.class.columns_hash[field.to_s]&.type
+        if col_type == :text
+          serialized = case val
+                       when nil    then nil
+                       when String then val
+                       else             val.to_json
+                       end
+          write_attribute(field, serialized)
+        else
+          write_attribute(field, val)
+        end
+      end
+    end
 
     # Validations
     validates :transaction_name, presence: true
@@ -181,28 +208,23 @@ module Findbug
     # @return [Array<Hash>] time series data
     #
     def self.throughput_over_time(since: 24.hours.ago, interval: "hour")
-      # This uses database-specific date truncation
-      # Works with PostgreSQL; adjust for other databases
-      time_column = case interval
-                    when "minute" then "date_trunc('minute', captured_at)"
-                    when "hour" then "date_trunc('hour', captured_at)"
-                    when "day" then "date_trunc('day', captured_at)"
-                    else "date_trunc('hour', captured_at)"
-                    end
+      time_sql = Findbug::AdapterHelper.date_trunc_sql(interval, "captured_at")
 
       where("captured_at >= ?", since)
-        .group(Arel.sql(time_column))
+        .group(Arel.sql(time_sql))
         .select(
-          Arel.sql("#{time_column} as time_bucket"),
+          Arel.sql("#{time_sql} as time_bucket"),
           "COUNT(*) as request_count",
           "AVG(duration_ms) as avg_duration"
         )
-        .order(Arel.sql(time_column))
+        .order(Arel.sql(time_sql))
         .map do |row|
+          time = row.time_bucket
+          time = Time.parse(time.to_s) unless time.respond_to?(:strftime)
           {
-            time: row.time_bucket,
+            time: time,
             count: row.request_count,
-            avg_duration_ms: row.avg_duration.round(2)
+            avg_duration_ms: row.avg_duration&.round(2) || 0
           }
         end
     end
