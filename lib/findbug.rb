@@ -211,6 +211,7 @@ require_relative "findbug/capture/context"
 require_relative "findbug/capture/exception_handler"
 require_relative "findbug/capture/message_handler"
 require_relative "findbug/capture/middleware"
+require_relative "findbug/alerts"
 
 # Load the Railtie if Rails is available
 # This auto-configures Findbug when Rails boots
