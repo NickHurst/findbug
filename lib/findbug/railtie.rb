@@ -182,6 +182,18 @@ module Findbug
       end
     end
 
+    # Load background jobs
+    initializer "findbug.background_jobs" do |app|
+      app.config.after_initialize do
+        if defined?(ActiveJob) || !Findbug.config.auto_persist
+          jobs_path = File.expand_path("../../app/jobs/findbug", __dir__)
+          require "#{jobs_path}/alert_job"
+          require "#{jobs_path}/cleanup_job"
+          require "#{jobs_path}/persist_job"
+        end
+      end
+    end
+
     # Start background persister
     #
     # This runs a thread that periodically moves events from Redis to the database.
