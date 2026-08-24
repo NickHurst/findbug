@@ -326,9 +326,11 @@ module Findbug
   #
   class AlertConfiguration
     attr_accessor :throttle_period
+    attr_accessor :async_dispatch
 
     def initialize
       @throttle_period = 300 # 5 minutes default
+      @async_dispatch = true
     end
 
     # Deprecated DSL methods — kept for backward compatibility so existing

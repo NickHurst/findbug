@@ -56,6 +56,9 @@ module Findbug
     validates :status, inclusion: { in: [STATUS_UNRESOLVED, STATUS_RESOLVED, STATUS_IGNORED] }
     validates :severity, inclusion: { in: [SEVERITY_ERROR, SEVERITY_WARNING, SEVERITY_INFO] }
 
+    after_commit :notify_alert_dispatcher, on: :create
+    after_commit :notify_alert_dispatcher, on: :update
+
     # JSON field accessors — normalise across adapters (jsonb/json/text).
     # Reader always returns a Hash; writer stores a JSON string on text columns
     # and the native object on json/jsonb columns.
@@ -172,6 +175,9 @@ module Findbug
       update!(status: STATUS_UNRESOLVED)
     end
 
+    def resolved? = status == STATUS_RESOLVED
+    def ignored? = status == STATUS_IGNORED
+
     # Get parsed backtrace as array
     def backtrace_lines
       return [] unless backtrace
@@ -220,6 +226,13 @@ module Findbug
       return nil unless backtrace
 
       backtrace.is_a?(Array) ? backtrace.to_json : backtrace
+    end
+
+    def notify_alert_dispatcher
+      return unless persisted?
+      return if resolved? || ignored?
+
+      Alerts::Dispatcher.notify self
     end
   end
 end

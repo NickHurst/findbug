@@ -40,14 +40,18 @@ module Findbug
         # @param error_event [ErrorEvent] the error to alert about
         # @param async [Boolean] whether to send asynchronously (default: true)
         #
-        def notify(error_event, async: true)
+        def notify(error_event, async: nil)
           return unless Findbug.enabled?
           return unless any_enabled?
           return unless should_alert?(error_event)
           return if throttled?(error_event)
 
+          if async.nil?
+            async = Findbug.config.alerts.async_dispatch && defined?(::Findbug::AlertJob)
+          end
+
           if async
-            Jobs::AlertJob.perform_later(error_event.id)
+            AlertJob.perform_later(error_event.id)
           else
             send_alerts(error_event)
           end
