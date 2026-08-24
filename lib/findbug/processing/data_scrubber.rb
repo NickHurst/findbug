@@ -109,6 +109,8 @@ module Findbug
         end
 
         def sensitive_key?(key)
+          return false if scrub_allow_fields.include?(key.to_s)
+
           key_s = key.to_s.downcase
 
           # Check against configured scrub fields
@@ -119,6 +121,10 @@ module Findbug
 
         def scrub_fields
           @scrub_fields ||= build_scrub_fields
+        end
+
+        def scrub_allow_fields
+          @scrub_allow_fields ||= (Findbug.config.scrub_allow_fields || [])
         end
 
         def build_scrub_fields
