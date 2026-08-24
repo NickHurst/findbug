@@ -86,6 +86,11 @@ module Findbug
     # Default: common sensitive fields
     attr_accessor :scrub_fields
 
+    # Field names to NOT scrub from captured data.
+    # These will only be skipped if field name matches exactly.
+    # Default: empty array
+    attr_accessor :scrub_allow_fields
+
     # Whether to scrub request headers.
     # Default: true (scrubs Authorization, Cookie, etc.)
     attr_accessor :scrub_headers
@@ -196,6 +201,7 @@ module Findbug
         ssn social_security
         private_key
       ]
+      @scrub_allow_fields = []
       @scrub_headers = true
       @scrub_header_names = []
 
